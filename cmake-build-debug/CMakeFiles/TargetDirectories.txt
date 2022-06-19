@@ -1,0 +1,3 @@
+/home/chiya/CLionProjects/VPS-manager/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/chiya/CLionProjects/VPS-manager/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/chiya/CLionProjects/VPS-manager/cmake-build-debug/CMakeFiles/VPS_manager.dir
