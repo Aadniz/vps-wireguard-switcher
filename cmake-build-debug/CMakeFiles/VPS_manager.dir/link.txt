@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/VPS_manager.dir/main.cpp.o -o VPS_manager 
