@@ -4,8 +4,9 @@ import os
 
 class Settings:
     check_interval = 300
+    max_switches_a_day = 8
+    max_ms = 750
     servers = []
-    active = 0
 
     __has_init = False
 
@@ -35,20 +36,43 @@ class Settings:
             exit(1)
 
         # Checking if vps_servers has the correct format
-        required_keys = ["ip", "port", "public_key", "priority", "subnet", "local_ip"]
+        required_keys = ["ip", "port", "public_key", "subnet", "local_ip"]
 
         has_failed = False
+        pri = 1
+        c = 0
         for server in jsonObject["vps_servers"]:
             missing_keys = [key for key in required_keys if key not in server]
             if missing_keys:
                 print(f"Missing key(s) {', '.join(missing_keys)} in server array config in settings.json")
                 has_failed = True
+                continue
+
+            if "priority" in server:
+                pri = server["priority"] + 1
+            else:
+                jsonObject["vps_servers"][c]["priority"] = pri
+                pri += 1
+
+            if not "name" in server:
+                jsonObject["vps_servers"][c]["name"] = server["ip"] + ":" + server["port"] + "-" + server["public_key"]
+
+            c += 1
 
         if has_failed:
             exit(1)
 
-        Settings.__servers = jsonObject["vps_servers"]
+        Settings.servers = jsonObject["vps_servers"]
 
+        # Optional settings
         if "check_interval" in jsonObject:
             if jsonObject["check_interval"] > 5:
                 Settings.check_interval = jsonObject["check_interval"]
+
+        if "max_switches_a_day" in jsonObject:
+            if jsonObject["max_switches_a_day"] > 1:
+                Settings.max_switches_a_day = jsonObject["max_switches_a_day"]
+
+        if "max_ms" in jsonObject:
+            if jsonObject["max_ms"] > 1:
+                Settings.max_ms = jsonObject["max_ms"]
