@@ -6,7 +6,10 @@ class Settings:
     check_interval = 300
     max_switches_a_day = 8
     max_ms = 750
-    servers = []
+    max_http_ms = 8000
+    success_rate = 0.6
+    servers = [],
+    paths = []
 
     __has_init = False
 
@@ -64,15 +67,44 @@ class Settings:
 
         Settings.servers = jsonObject["vps_servers"]
 
+        # Checking paths in settings
+        if "paths" in jsonObject:
+            for path in jsonObject["paths"]:
+                if "hostname" not in path:
+                    print("Missing hostname in one or more paths!")
+                    exit(1)
+                if "path" not in path:
+                    print("Missing path in one or more paths!")
+                    exit(1)
+            Settings.paths = jsonObject["paths"]
+
         # Optional settings
         if "check_interval" in jsonObject:
             if jsonObject["check_interval"] > 5:
                 Settings.check_interval = jsonObject["check_interval"]
+            else:
+                print("WARNING: check_interval is smaller than 5!")
 
         if "max_switches_a_day" in jsonObject:
             if jsonObject["max_switches_a_day"] > 1:
                 Settings.max_switches_a_day = jsonObject["max_switches_a_day"]
+            else:
+                print("WARNING: max_switches_a_day must be more than 1")
 
         if "max_ms" in jsonObject:
             if jsonObject["max_ms"] > 1:
                 Settings.max_ms = jsonObject["max_ms"]
+            else:
+                print("WARNING: Who looks for max_ms less than 1? Trade servers? Anyways, 1 > max_ms is not supported")
+
+        if "success_rate" in jsonObject:
+            if jsonObject["success_rate"] > 0:
+                Settings.success_rate = jsonObject["success_rate"]
+            else:
+                print("WARNING: if success_rate is less than 0, it means it will succeed if everything fails. Comon give it some more thought!")
+
+        if "max_http_ms" in jsonObject:
+            if jsonObject["max_http_ms"] > Settings.max_ms:
+                Settings.max_http_ms = jsonObject["max_http_ms"]
+            else:
+                print("WARNING: max_http_ms must be greater than max_ms. It doesn't make sense for a HTTP protocol to be quicker than a ping")
