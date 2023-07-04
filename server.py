@@ -26,7 +26,7 @@ class Server:
         tests = 2
         successes = 0
 
-        if len(Settings.paths) > 0:
+        if len(Settings.tests) > 0:
             tests += 1
 
         # First try to ping
@@ -52,27 +52,52 @@ class Server:
             print("[" + str(successes) + "/" + str(tests) + "] HTTP:\t", e)
 
         # Now test reverse proxy directly
-        extra_tests = len(Settings.paths)
-        if len(Settings.paths) > 0:
-            for path in Settings.paths:
-                hostnames = []
-                if type(path["hostname"]) == list:
-                    hostnames = path["hostname"]
-                    extra_tests += len(path["hostname"])
+        extra_tests = 0
+        if len(Settings.tests) > 0:
+            # Count the amount of extra tasks
+            for test in Settings.tests:
+                if type(test["hostname"]) == list:
+                    extra_tests += len(test["hostname"])
                 else:
-                    hostnames = [path["hostname"]]
                     extra_tests += 1
+            for test in Settings.tests:
+                hostnames = []
+                if type(test["hostname"]) == list:
+                    hostnames = test["hostname"]
+                else:
+                    hostnames = [test["hostname"]]
                 for hostname in hostnames:
-                    response = requests.get(f'http://{server["ip"]}{path["path"]}', headers={'Host': hostname})
-                    status_code = response.status_code
-                    if "response_code" in path and path["response_code"] == status_code:
-                        successes += 1/extra_tests
-                        print("[" + str(int(successes)) + "/" + str(tests) + "] HTTP:\tStatus Code " + str(status_code))
-                    elif "response_code" not in path and 500 > status_code:
-                        successes += 1/extra_tests
-                        print("[" + str(int(successes)) + "/" + str(tests) + "] HTTP:\tStatus Code " + str(status_code))
-                    else:
-                        print("[" + str(int(successes)) + "/" + str(tests) + "] HTTP:\tStatus Code " + str(status_code))
+                    try:
+                        response = requests.get(f'http://{server["ip"]}{test["path"]}', headers={'Host': hostname}, timeout=Settings.max_http_ms)
+                        status_code = response.status_code
+                        if "response_code" in test and test["response_code"] == status_code:
+                            successes += 1/extra_tests
+                            print("(" + str(int(successes / tests*100)) + "%) HTTP:\tStatus Code " + str(status_code))
+                        elif "response_code" not in test and 500 > status_code:
+                            successes += 1/extra_tests
+                            print("(" + str(int(successes / tests*100)) + "%) HTTP:\tStatus Code " + str(status_code))
+                        else:
+                            print("(" + str(int(successes / tests*100)) + "%) HTTP:\tStatus Code " + str(status_code))
+                    except Exception as e:
+                        print("(" + str(int(successes / tests * 100)) + "%) HTTP:\t", e)
+
+        return successes / tests > Settings.success_rate
+
+    @staticmethod
+    def self_test():
+        """
+        This function will check if there is any network connection at all
+        :return: returns true if it has network connection
+        """
+        tests = len(Settings.self_test_addresses)
+        successes = 0
+        for host in Settings.self_test_addresses:
+            # First try to ping
+            res = ping(host, 4, "ms")
+            if res is not None:
+                successes += 1
+
+        return successes/tests > Settings.self_test_success_rate
 
     @staticmethod
     def __resolve_query(query) -> dict:

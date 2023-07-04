@@ -16,3 +16,4 @@ Cython~=0.29.35
 future~=0.18.3
 platformdirs~=3.5.1
 ping3~=4.0.4
+psutil~=5.9.5

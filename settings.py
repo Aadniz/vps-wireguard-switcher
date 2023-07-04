@@ -9,7 +9,9 @@ class Settings:
     max_http_ms = 8000
     success_rate = 0.6
     servers = [],
-    paths = []
+    tests = []
+    self_test_addresses = ["1.1.1.1"]
+    self_test_success_rate = 0.7
 
     __has_init = False
 
@@ -68,15 +70,15 @@ class Settings:
         Settings.servers = jsonObject["vps_servers"]
 
         # Checking paths in settings
-        if "paths" in jsonObject:
-            for path in jsonObject["paths"]:
-                if "hostname" not in path:
+        if "tests" in jsonObject:
+            for test in jsonObject["tests"]:
+                if "hostname" not in test:
                     print("Missing hostname in one or more paths!")
                     exit(1)
-                if "path" not in path:
+                if "path" not in test:
                     print("Missing path in one or more paths!")
                     exit(1)
-            Settings.paths = jsonObject["paths"]
+            Settings.tests = jsonObject["tests"]
 
         # Optional settings
         if "check_interval" in jsonObject:
@@ -103,8 +105,22 @@ class Settings:
             else:
                 print("WARNING: if success_rate is less than 0, it means it will succeed if everything fails. Comon give it some more thought!")
 
+        if "self_test_success_rate" in jsonObject:
+            if jsonObject["self_test_success_rate"] > 0:
+                Settings.self_test_success_rate = jsonObject["self_test_success_rate"]
+            else:
+                print("WARNING: if self_test_success_rate is less than 0, it means it will succeed if everything fails. Comon give it some more thought!")
+
         if "max_http_ms" in jsonObject:
             if jsonObject["max_http_ms"] > Settings.max_ms:
                 Settings.max_http_ms = jsonObject["max_http_ms"]
             else:
                 print("WARNING: max_http_ms must be greater than max_ms. It doesn't make sense for a HTTP protocol to be quicker than a ping")
+
+        if "self_test_addresses" in jsonObject:
+            if type(jsonObject["self_test_addresses"]) == str:
+                Settings.self_test_addresses = [jsonObject["self_test_addresses"]]
+            elif type(jsonObject["self_test_addresses"]) == list:
+                Settings.self_test_addresses = jsonObject["self_test_addresses"]
+            else:
+                print("WARNING: self_test_addresses is neither a string or a list?")
