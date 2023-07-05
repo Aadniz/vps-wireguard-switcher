@@ -19,7 +19,7 @@ if __name__ == '__main__':
         # Self-test first
         print("Running self-test ...")
         res = Server.self_test()
-        if res == False:
+        if not res:
             print("CRITICAL: Self-test failed! Doing nothing")
             time.sleep(Settings.check_interval)
             continue
@@ -29,5 +29,7 @@ if __name__ == '__main__':
             print("Checking " + host["name"] + " ...")
             res = Server.check(host)
             print(res)
+
+        print(wireguard.active_server)
 
         time.sleep(Settings.check_interval)

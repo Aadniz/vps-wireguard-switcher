@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="e6ef2083-30ab-41c4-bf16-9840777b07eb" name="debian11">
+        <fileTransfer rootFolder="/home/matrix" accessType="SFTP" host="192.168.100.204" port="22" sshConfigId="896aded6-71a2-4e59-bd9a-0e6476dcd4fe" sshConfig="matrix@192.168.100.204:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

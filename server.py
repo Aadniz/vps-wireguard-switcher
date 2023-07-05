@@ -22,7 +22,7 @@ class Server:
         :param query: Match one value in JSON settings, or be equal to the host
         :return:
         """
-        server = Server.__resolve_query(query)
+        server = Server.get_server(query)
         tests = 2
         successes = 0
 
@@ -68,7 +68,7 @@ class Server:
                     hostnames = [test["hostname"]]
                 for hostname in hostnames:
                     try:
-                        response = requests.get(f'http://{server["ip"]}{test["path"]}', headers={'Host': hostname}, timeout=Settings.max_http_ms)
+                        response = requests.get(f'http://{server["ip"]}{test["path"]}', headers={'Host': hostname}, timeout=Settings.max_http_ms/1000)
                         status_code = response.status_code
                         if "response_code" in test and test["response_code"] == status_code:
                             successes += 1/extra_tests
@@ -93,14 +93,18 @@ class Server:
         successes = 0
         for host in Settings.self_test_addresses:
             # First try to ping
-            res = ping(host, 4, "ms")
+            res = None
+            try:
+                res = ping(host, 4, "ms")
+            except PermissionError as e:
+                print("No permission to ping. Please run as root or check https://github.com/robfox92/ping3/blob/c18fb2a23fe601356cba69e6881d92605c875b79/TROUBLESHOOTING.MD")
             if res is not None:
                 successes += 1
 
         return successes/tests > Settings.self_test_success_rate
 
     @staticmethod
-    def __resolve_query(query) -> dict:
+    def get_server(query) -> dict:
         """
         Function to resolve query and return a server object
         :param query: In case query is a number, it will check the priority. Otherwise it will match on the strings

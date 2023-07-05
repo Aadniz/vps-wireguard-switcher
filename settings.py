@@ -8,6 +8,7 @@ class Settings:
     max_ms = 750
     max_http_ms = 8000
     success_rate = 0.6
+    double_checks = 3
     servers = [],
     tests = []
     self_test_addresses = ["1.1.1.1"]
@@ -104,6 +105,12 @@ class Settings:
                 Settings.success_rate = jsonObject["success_rate"]
             else:
                 print("WARNING: if success_rate is less than 0, it means it will succeed if everything fails. Comon give it some more thought!")
+
+        if "double_checks" in jsonObject:
+            if jsonObject["double_checks"] >= 0:
+                Settings.double_checks = jsonObject["double_checks"]
+            else:
+                print("WARNING: double_checks can't be negative.")
 
         if "self_test_success_rate" in jsonObject:
             if jsonObject["self_test_success_rate"] > 0:
