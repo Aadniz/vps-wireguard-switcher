@@ -9,10 +9,14 @@ class Settings:
     max_http_ms = 8000
     success_rate = 0.6
     double_checks = 3
-    servers = [],
+    servers = []
     tests = []
     self_test_addresses = ["1.1.1.1"]
     self_test_success_rate = 0.7
+    wireguard_interface = None
+
+    highest_priority = None
+    lowest_priority = None
 
     __has_init = False
 
@@ -46,7 +50,6 @@ class Settings:
 
         has_failed = False
         pri = 1
-        c = 0
         for server in jsonObject["vps_servers"]:
             missing_keys = [key for key in required_keys if key not in server]
             if missing_keys:
@@ -57,13 +60,18 @@ class Settings:
             if "priority" in server:
                 pri = server["priority"] + 1
             else:
-                jsonObject["vps_servers"][c]["priority"] = pri
+                server["priority"] = pri
                 pri += 1
 
-            if not "name" in server:
-                jsonObject["vps_servers"][c]["name"] = server["ip"] + ":" + server["port"] + "-" + server["public_key"]
+            if Settings.highest_priority is None or Settings.highest_priority > server["priority"]:
+                Settings.highest_priority = server["priority"]
+            if Settings.lowest_priority is None or server["priority"] > Settings.lowest_priority:
+                Settings.lowest_priority = server["priority"]
 
-            c += 1
+            if "name" not in server:
+                server["name"] = server["ip"] + ":" + server["port"] + "-" + server["public_key"]
+            if "persistent_keepalive" not in server or 5 > server["persistent_keepalive"]:
+                server["persistent_keepalive"] = 25
 
         if has_failed:
             exit(1)
@@ -111,6 +119,9 @@ class Settings:
                 Settings.double_checks = jsonObject["double_checks"]
             else:
                 print("WARNING: double_checks can't be negative.")
+
+        if "wireguard_interface" in jsonObject:
+            Settings.wireguard_interface = jsonObject["wireguard_interface"]
 
         if "self_test_success_rate" in jsonObject:
             if jsonObject["self_test_success_rate"] > 0:
