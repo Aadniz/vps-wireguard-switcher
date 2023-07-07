@@ -142,7 +142,7 @@ class Wireguard:
                 print("> " + host["name"])
                 allowed_ips = "0.0.0.0/0"
             else:
-                print("  " + host["name"])
+                print("< " + host["name"])
 
             output = subprocess.run([
                 "wg", "set", Wireguard.interface, "peer", host["public_key"],
@@ -154,7 +154,9 @@ class Wireguard:
 
             if output.returncode != 0:
                 print("ERROR: ", output.stderr)
-                return
+                time.sleep(2)
+                c += 1
+                continue
             if result != "":
                 print(result)
 

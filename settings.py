@@ -14,6 +14,8 @@ class Settings:
     self_test_addresses = ["1.1.1.1"]
     self_test_success_rate = 0.7
     wireguard_interface = None
+    cloudflare_key = None
+    cloudflare_hosts = []
 
     highest_priority = None
     lowest_priority = None
@@ -142,3 +144,15 @@ class Settings:
                 Settings.self_test_addresses = jsonObject["self_test_addresses"]
             else:
                 print("WARNING: self_test_addresses is neither a string or a list?")
+
+        if "cloudflare_key" in jsonObject:
+            Settings.cloudflare_key = jsonObject["cloudflare_key"]
+
+        if "cloudflare_hosts" in jsonObject:
+            if type(jsonObject["cloudflare_hosts"]) == str and jsonObject["cloudflare_hosts"].strip() != "":
+                Settings.cloudflare_hosts = [jsonObject["cloudflare_hosts"]]
+            elif type(jsonObject["cloudflare_hosts"]) == list and len(jsonObject["cloudflare_hosts"]) > 0:
+                Settings.cloudflare_hosts = jsonObject["cloudflare_hosts"]
+            elif Settings.cloudflare_key is not None:
+                print("WARNING: no cloudflare hosts specified! The DNS switching will apply to all domains within the account!")
+                Settings.cloudflare_hosts = []

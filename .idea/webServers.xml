@@ -9,6 +9,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="81e75c05-bfc7-49f3-beba-241de87f9589" name="matrix">
+        <fileTransfer rootFolder="/home/pi" accessType="SFTP" host="192.168.1.105" port="22" sshConfigId="5f98e093-9bc5-41e9-addf-82c3949f004e" sshConfig="pi@192.168.1.105:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>
