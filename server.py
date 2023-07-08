@@ -3,6 +3,7 @@ from ping3 import ping, verbose_ping
 import requests
 
 from settings import Settings
+from cloudflare import Cloudflare
 import wireguard
 
 
@@ -115,6 +116,8 @@ class Server:
             return
 
         wireguard.Wireguard.reset_or_switch(server)
+        cf = Cloudflare()
+        cf.switch_dns(server["ip"], dns_type="A")
         Server.__switches_today += 1
 
     @staticmethod

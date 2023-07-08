@@ -4,8 +4,11 @@ from settings import Settings
 
 
 class Cloudflare(CloudFlare.CloudFlare):
-    signed_in = False
+    #signed_in = False
     hosts = []
+    """
+    cloudflare_hosts from ./settings.py
+    """
 
     # During creation of extended cloudflare class, we will pull the API key from settings.py if set
     def __init__(self):
@@ -15,8 +18,15 @@ class Cloudflare(CloudFlare.CloudFlare):
         self.hosts = Settings.cloudflare_hosts
 
     def switch_dns(self, content, dns_type=None, hosts=None):
+        """
+        Switch cloudflare DNS
+        :param content: The value to be changed
+        :param dns_type: The type to change, like "A", "AAAA", "TXT" etc...
+        :param hosts: The hosts this applies to. If not set, will use the settings.json hosts. If neither are set, it will update EVERYTHING!
+        :return:
+        """
         if hosts is None:
-            hosts = []
+            hosts = self.hosts
 
         # Get the DNS config for the queried hosts
         dns_settings = self.get_dns_settings(hosts, dns_type)

@@ -103,10 +103,11 @@ class Wireguard:
                 return
 
     @staticmethod
-    def reset_or_switch(focus_host: dict = None):
+    def reset_or_switch(focus_host: dict = None, force=False):
         """
         Here we switch or restart the wireguard settings. May be used when there is no interface, or gateway
         :param focus_host: A host object
+        :param force: Force restart the systemd service without looping 3 times
         :return:
         """
         if focus_host is None:
@@ -121,7 +122,7 @@ class Wireguard:
 
         service_name = f"wg-quick@{Wireguard.interface}.service"
         service_status = Systemd.state(service_name)
-        if service_status != "active" and Wireguard.__fails >= 3:
+        if force or (service_status != "active" and Wireguard.__fails >= 3):
             Systemd.restart(service_name)
             status = Systemd.state(service_name)
             while status != "active":
