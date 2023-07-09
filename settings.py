@@ -92,7 +92,7 @@ class Settings:
         file_dir = os.path.dirname(os.path.realpath(__file__))
         file_path = file_dir + "/settings.json"
         if not os.path.isfile(file_path):
-            print("Settings file not found: " + file_path)
+            print(f"Settings file not found: {file_path}")
             print("Please copy paste the example shown in README.MD")
             exit(1)
 
@@ -150,6 +150,16 @@ class Settings:
                 if "path" not in test:
                     print("Missing path in one or more paths!")
                     exit(1)
+                test["port"] = 80
+                test["scheme"] = "http" if "scheme" not in test else test["scheme"]
+                if "://" in test["hostname"]:
+                    test["scheme"] = test["hostname"].split("://")[0]
+                    test["hostname"] = test["hostname"].split("://")[1]
+                if ":" in test["hostname"]:
+                    test["port"] = int(test["hostname"].split(":")[1])
+                    test["hostname"] = test["hostname"].split(":")[0]
+                if test["port"] == 443 or test["port"] == 8443:
+                    test["scheme"] = "https"
             Settings.tests = jsonObject["tests"]
 
         # Optional settings

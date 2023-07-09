@@ -43,7 +43,22 @@ class Cloudflare(CloudFlare.CloudFlare):
         if updated_anything == False:
             print("Cloudflare DNS values not changed")
 
-    def update_dns_setting(self, zone_id, dns_id: str, name: str, dns_type: str, content: str, proxied: bool, comment: str = None, tags: list = None, ttl: int = None):
+    def update_dns_setting(self, zone_id, dns_id: str, name: str, dns_type: str, content: str, proxied: bool, comment: str = None, tags: list = None, ttl: int = None) -> bool:
+        """
+        Function to update the DNS record, do the API query towards Cloudflare
+        https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-update-dns-record
+        :param zone_id: Each zone (or domain if you will) has their own zone id. Required
+        :param dns_id: Need to know what DNS row we are talking about. That's when we use the dns_id
+        :param name: The domain name, or more general the DNS record name
+        :param dns_type: The type, being A, AAAA, MX, TXT etc...
+        :param content: The content of the DNS record. Like an ip address
+        :param proxied: Whenever to proxy the ip through cloudflare or reveal the real IP behind the hood (SHOULD ALWAYS BE TRUE)
+        :param comment: If you feel spicy you can add a comment
+        :param tags: Custom array[string] tags for the DNS record. This field has no effect on DNS responses.
+        :param ttl: Time To Live (TTL) of the DNS record in seconds. Setting to 1 means 'automatic'. Value must be between 60 and 86400, with the minimum reduced to 30 for Enterprise zones.
+        :return: True on success, false on failure with the error in the cout
+
+        """
         data = {
             'name': name,
             'type': dns_type,
@@ -71,7 +86,13 @@ class Cloudflare(CloudFlare.CloudFlare):
 
         return True
 
-    def get_dns_settings(self, query: str | list = None, dns_type=None):
+    def get_dns_settings(self, query: str | list = None, dns_type=None) -> list:
+        """
+        Get the DNS settings from cloudflare specifying the Query and DNS Type
+        :param query: Query 1 or more values of zone_id or name. If the query is an empty array, it will give everything in response
+        :param dns_type: The type, being A, AAAA, MX, TXT etc...
+        :return: A multidimensional list of the dns settings. zone[][] where each zone has setting[]
+        """
         if query is None:
             query = []
 
@@ -94,7 +115,7 @@ class Cloudflare(CloudFlare.CloudFlare):
     def query_zones(self, query: str | list = None):
         """
         Function to query the zones that fits the query.
-        :param query: We can only query 1 or more values of zone_id or name. If the query is an empty array, it will give everything in response
+        :param query: Query 1 or more values of zone_id or name. If the query is an empty array, it will give everything in response
         :return: Returns the array of zones that matches the query
         """
         if query is None:

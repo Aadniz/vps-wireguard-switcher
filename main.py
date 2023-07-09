@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
         for host in Server.hosts:
             # Check if there is connection to the host
-            print("Checking " + host["name"] + " ...")
+            print(f'Checking {host["name"]} ...')
             # The server.check returns a [local success, external success, total tests]
             res = Server.check(host)
             print("[local, external, total] = ", end="")
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
             # Only switch once double_checks are more than Settings.double_checks
             if Settings.double_checks > double_checks_counter:
-                print("[" + str(double_checks_counter) + "/" + str(Settings.double_checks) + "] Active server failed, switching in " + str(Settings.double_checks - double_checks_counter) + " loops")
+                print(f"[{double_checks_counter}/{Settings.double_checks}] Active server failed, switching in {(Settings.double_checks - double_checks_counter)} loops")
                 continue
 
             for host in Server.hosts:
@@ -66,12 +66,12 @@ if __name__ == '__main__':
                     continue
                 # Switch to anything that has successes on local tests
                 if not Server.WAN and host["status"][0] / host["status"][2] >= Settings.success_rate:
-                    print("Switching to " + host["name"])
+                    print(f'Switching to {host["name"]}')
                     Server.switch(host)
                     break
                 # Switch to anything that has successes on both local and external
                 if Server.WAN and host["status"][0] / host["status"][2] >= Settings.success_rate and host["status"][1] / host["status"][2] >= Settings.success_rate:
-                    print("Switching to " + host["name"])
+                    print(f'Switching to {host["name"]}')
                     Server.switch(host)
                     break
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
                 healthy_double_checks_counter = 0
             elif healthy_double_checks_counter >= Settings.healthy_switching_checks:
                 # Switch
-                print("Switching to " + highest_score_host['name'])
+                print(f"Switching to {highest_score_host['name']}")
                 Server.switch(highest_score_host)
                 healthy_double_checks_counter = 0
             else:
@@ -114,10 +114,10 @@ if __name__ == '__main__':
                 continue
             if Wireguard.active_server is None:
                 print("Could not find active server!")
-                print("zzzzzzzzzZZZZZZZZZZZZzzzzzz... (" + str(Settings.check_interval) + "s)")
+                print(f"zzzzzzzzzZZZZZZZZZZZZzzzzzz... ({Settings.check_interval}s)")
                 time.sleep(Settings.check_interval)
                 continue
 
         print(f"\nActive route through {Wireguard.active_server['name']}\n")
-        print("zzzzzzzzzZZZZZZZZZZZZzzzzzz... ("+str(Settings.check_interval)+"s)")
+        print(f"zzzzzzzzzZZZZZZZZZZZZzzzzzz... ({Settings.check_interval}s)")
         time.sleep(Settings.check_interval)

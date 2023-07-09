@@ -82,7 +82,7 @@ class Wireguard:
                 found = True
                 break
         if not found:
-            print(Wireguard.interface + " instance not found in ip addr")
+            print(f"{Wireguard.interface} instance not found in ip addr")
             Wireguard.up = False
             return
 
@@ -92,7 +92,7 @@ class Wireguard:
     @staticmethod
     def try_get_interface():
         if not os.access(Wireguard.__config_path, os.R_OK):
-            print("No access to read " + Wireguard.__config_path)
+            print(f"No access to read {Wireguard.__config_path}")
             return
 
         files = glob.glob(Wireguard.__config_path + "*.conf")
