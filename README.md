@@ -13,6 +13,10 @@ and also the possibility to update the DNS records on cloudflare.
 Template/Example:
 ```json
 {
+  "cloudflare_key": "abcdefghijklmnopqrstuvwxyz1234567890ABCD",
+  "cloudflare_hosts": ["example.org", "test.com"],
+  "healthy_switching_checks": 16,
+  "wireguard_interface": "wg0",
   "check_interval": 600,
   "max_switches_a_day": 8,
   "max_ms": 750,
@@ -29,7 +33,8 @@ Template/Example:
       "public_key": "abcdefghijklmnop/qrstuv+wxyz1234567890ABCDE=",
       "priority": 1,
       "subnet": "10.0.0.0/24",
-      "local_ip": "10.0.0.1"
+      "local_ip": "10.0.0.1",
+      "persistent_keepalive": 25
     },
     {
       "name": "Backup VPS",
@@ -38,14 +43,16 @@ Template/Example:
       "public_key": "qwertyuiopasdfghjklzxcvbnm/1234567890QWERTY=",
       "priority": 2,
       "subnet": "10.0.1.0/24",
-      "local_ip": "10.0.1.1"
+      "local_ip": "10.0.1.1",
+      "persistent_keepalive": 25
     }
   ],
   "tests": [
     {
-      "hostname": "example.org",
+      "hostname": "example.org:443",
       "path": "/_matrix/federation/v1/version",
-      "response_code": 200
+      "response_code": 200,
+      "scheme": "https"
     },
     {
       "hostname": "example.org",
@@ -59,4 +66,24 @@ Template/Example:
     }
   ]
 }
+```
+
+### Setting up systemd service
+When setting up the systemd service, we can create the service below under `/etc/systemd/system/`,
+and change the values to fit our needs. Change the paths to the correct directory.
+
+```
+[Unit]
+Description=VPS manager
+After=network.target
+
+[Service]
+WorkingDirectory=/home/pi/Documents/vps-manager
+ExecStart=/home/user/Documents/vps-manager/venv/bin/python3 /home/user/Documents/vps-manager/main.py
+RestartSec=5
+Restart=always
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
 ```
