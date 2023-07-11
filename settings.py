@@ -78,6 +78,19 @@ class Settings:
     IF cloudflare_key IS SET AND cloudflare_hosts IS EMPTY, IT WILL CONTROL ALL ZONES
     """
 
+    proxy: dict | None = None
+    """
+    Proxy configuration when doing the tests and/or update cloudflare DNS
+    
+    * route: **1|2|3** - 1: checks only, 2: external network (cloudflare) only, 3: everything
+    * strict: true|false - If set to false, it will try without proxy if it fails
+    * type: socks5|socks4|http - The type of proxy
+    * host: domain, hostname, ip address
+    * port: The port
+    * username: Username if any
+    * password: Password if any
+    """
+
     highest_priority: int = None
     lowest_priority: int = None
 
@@ -233,3 +246,34 @@ class Settings:
             elif Settings.cloudflare_key is not None:
                 print("WARNING: no cloudflare hosts specified! The DNS switching will apply to all domains within the account!")
                 Settings.cloudflare_hosts = []
+
+        if "proxy" in jsonObject:
+            default_proxy = {
+                "route": 1,  # 1 - checks, 2 - cloudflare, 3 - everything
+                "strict": True  # If false, during failure, try without the proxy
+            }
+
+            # If proxy is defined, now check for required fields
+            if "type" in jsonObject["proxy"] and "host" in jsonObject["proxy"] and ("port" in jsonObject["proxy"] or ":" in jsonObject["proxy"]["host"]):
+                if "route" in jsonObject["proxy"]:
+                    if jsonObject["proxy"]["route"] != 1 and jsonObject["proxy"]["route"] != 2 and jsonObject["proxy"]["route"] != 3:
+                        print("proxy route must be 1, 2 or 3")
+                if "route" not in jsonObject["proxy"]:
+                    jsonObject["proxy"]["route"] = default_proxy["route"]
+
+                if "strict" in jsonObject["proxy"]:
+                    jsonObject["proxy"]["strict"] = jsonObject["proxy"]["strict"]
+                if "strict" not in jsonObject["proxy"]:
+                    jsonObject["proxy"]["strict"] = default_proxy["strict"]
+
+                if ":" in jsonObject["proxy"]["host"]:
+                    jsonObject["proxy"]["port"] = int(jsonObject["proxy"]["host"].split(":")[1])
+                    jsonObject["proxy"]["host"] = jsonObject["proxy"]["host"].split(":")[0]
+                Settings.proxy = jsonObject["proxy"]
+            elif "type" not in jsonObject["proxy"]:
+                print("WARNING: Missing field \"type\" in proxy settings")
+            elif "host" not in jsonObject["proxy"]:
+                print("WARNING: Missing field \"host\" in proxy settings")
+            elif not ("port" in jsonObject["proxy"] or ":" in jsonObject["proxy"]["host"]):
+                print("WARNING: Missing field \"port\" in proxy settings")
+

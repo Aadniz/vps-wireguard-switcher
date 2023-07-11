@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import requests
 
 from settings import Settings
+from proxy import Proxy
 from cloudflare import Cloudflare
 import wireguard
 
@@ -13,6 +14,9 @@ class Server:
     WAN = False
 
     __switches_today = 0
+    """
+    The amount of times the server has switched VPS server today
+    """
 
     @staticmethod
     def init():
@@ -61,16 +65,19 @@ class Server:
             else:
                 print(f" [{successes}/{tests}]\t{ip:<15} ping:\tFailed")
 
-            # Check if HTTP is working
-            req = urllib.request.Request("http://" + ip, data=None, method="HEAD", headers={'User-Agent': 'VPS Manager - server.py'})
+            # Set proxy
+            proxy = Proxy.get_requests_proxies(1)
+            print(proxy)
+            res = requests.request("HEAD", "http://" + ip, proxies=proxy, timeout=Settings.max_http_ms / 1000, headers={'User-Agent': 'VPS Manager - server.py'})
             try:
-                res = urllib.request.urlopen(req, timeout=Settings.max_http_ms/1000)
-                res_code = res.status
+                res = requests.request("HEAD", "http://" + ip, proxies=proxy, timeout=Settings.max_http_ms/1000, headers={'User-Agent': 'VPS Manager - server.py'})
+
+                res_code = res.status_code
                 if 500 > res_code:
                     successes += 1
-                print(f" [{successes}/{tests}]\t{ip:<15} HTTP:\tStatus Code {res_code}\t{req.full_url}")
+                print(f" [{successes}/{tests}]\t{ip:<15} HTTP:\tStatus Code {res_code}\t{res.url}")
             except TimeoutError:
-                print(f" [{successes}/{tests}]\t{ip:<15} HTTP:\tTIMEOUT\t{req.full_url}")
+                print(f" [{successes}/{tests}]\t{ip:<15} HTTP:\tTIMEOUT\t{res.url}")
             except Exception as e:
                 print(f" [{successes}/{tests}]\t{ip:<15} HTTP:\t", e)
 
