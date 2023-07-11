@@ -1,7 +1,5 @@
 # vps-manager
-
-Script to manage VPS switching and cloudflare settings.
-The script is meant to automate switching between a main VPS and a backup VPS.
+Script to automate switching between 2 or more VPS servers using a wireguard connection.
 
 ### Setting up
 When setting up the project, we first need to clone the repository, and enter the directory
@@ -139,3 +137,8 @@ Lastly, if everything works like it should, start the service at startup
 ```bash
 sudo systemctl enable vps-manager.service
 ```
+
+---
+
+# Read more
+[Setting up Wireguard for dual VPS system](/docs/wireguard.pdf)
