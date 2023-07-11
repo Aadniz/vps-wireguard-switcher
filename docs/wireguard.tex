@@ -1,0 +1,182 @@
+% Created 2023-07-11 Tue 08:35
+% Intended LaTeX compiler: pdflatex
+\documentclass[letterpaper, 11pt]{article}
+                      \usepackage{lmodern} % Ensures we have the right font
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage[table, xcdraw]{xcolor}
+\definecolor{bblue}{HTML}{0645AD}
+\usepackage[colorlinks]{hyperref}
+\hypersetup{colorlinks, linkcolor=blue, urlcolor=bblue}
+\usepackage{titling}
+\setlength{\droptitle}{-6em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
+\usepackage[stretch=10]{microtype}
+\usepackage{hyphenat}
+\usepackage{ragged2e}
+\usepackage{subfig} % Subfigures (not needed in Org I think)
+\usepackage{hyperref} % Links
+\usepackage{listings} % Code highlighting
+\usepackage[top=1in, bottom=1.25in, left=1in, right=1in]{geometry}
+\renewcommand{\baselinestretch}{1.15}
+\usepackage[explicit]{titlesec}
+\pretitle{\begin{center}\fontsize{20pt}{20pt}\selectfont}
+\posttitle{\par\end{center}}
+\preauthor{\begin{center}\vspace{-6bp}\fontsize{14pt}{14pt}\selectfont}
+\postauthor{\par\end{center}\vspace{-25bp}}
+\predate{\begin{center}\fontsize{12pt}{12pt}\selectfont}
+\postdate{\par\end{center}\vspace{0em}}
+\titlespacing\section{0pt}{5pt}{5pt} % left margin, space before section header, space after section header
+\titlespacing\subsection{0pt}{5pt}{-2pt} % left margin, space before subsection header, space after subsection header
+\titlespacing\subsubsection{0pt}{5pt}{-2pt} % left margin, space before subsection header, space after subsection header
+\usepackage{enumitem}
+\setlist{itemsep=-2pt} % or \setlist{noitemsep} to leave space around whole list
+\author{Aadniz}
+\date{\today}
+\title{Setting up Wireguard for dual VPS system}
+\hypersetup{
+ pdfauthor={Aadniz},
+ pdftitle={Setting up Wireguard for dual VPS system},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 28.2 (Org mode 9.6)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Client Tutorial}
+\label{sec:org9161e73}
+We are assuming that the client is running a Debian 12 instance. We will ensure this setup is possible to achieve over SSH throughout the steps.
+
+\subsection{Install wireguard}
+\label{sec:orgd6194fe}
+\begin{verbatim}
+sudo apt update
+sudo apt upgrade
+sudo apt install wireguard
+\end{verbatim}
+
+\subsection{Setting up the keys}
+\label{sec:org182215f}
+Generate the public and private keys by running the following commands
+\begin{verbatim}
+wg genkey | sudo tee /etc/wireguard/private.key
+sudo chmod go= /etc/wireguard/private.key
+sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
+\end{verbatim}
+
+\subsection{Configuring wg0.conf}
+\label{sec:orgf931ed9}
+
+The configuration file is located at \textit{/etc/wireguard/wg0.conf}
+\begin{verbatim}
+[Interface]
+Address = 10.0.0.205/16
+ListenPort = 51820
+PrivateKey = hZ46R....tsNy=
+
+[Peer]
+PublicKey = 9vxKz...IWns=
+AllowedIPs = 0.0.0.0/0
+Endpoint = 18.52.125.212:51820
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey = 6PsUS...wbxBY=
+Endpoint = 93.122.227.117:51820
+PersistentKeepalive = 25
+\end{verbatim}
+
+In the configuration we want to set the ip address within the subnet of the wireguard network, with the same ending numbers. So having 192.168.1.205, set the wireguard ip of 10.0.0.205.
+
+You can't set the private key to link to the private.key file. We have to copy paste the value of the file into the configuration.
+
+The peer that has \textit{AllowedIPs} is the peer that gets the gateway priority.
+
+\subsection{Adding peer to the server(s)}
+\label{sec:org9cfee12}
+Copy the content of \textit{/etc/wireguard/public.key} from the client, and paste in the following command on the server
+
+\begin{verbatim}
+sudo wg set wg0 peer PeUm3...29hg= allowed-ips 10.0.0.204 persistent-keepalive 25
+\end{verbatim}
+
+\subsection{Starting the service}
+\label{sec:org13ac0f6}
+\begin{verbatim}
+sudo systemctl start wg-quick@wg0.service
+sudo journalctl -fu wg-quick@wg0.service
+\end{verbatim}
+
+\subsection{Switching from one to another VPS}
+\label{sec:org57c70c9}
+When switching from one wireguard VPS to another, it is important to never overlap the Allowed-IPs.
+
+Given the active VPS1 public key being \textit{9vxKz...IWns=} and the other VPS2 public key being \textit{6PsUS...wbxBY}, the order of switching should look like this:
+
+\begin{verbatim}
+# Cut off gateway to VPS1
+sudo wg set wg0 peer 9vxKz...IWns= allowed-ips 10.0.0.0/24
+# Start gateway to VPS2
+sudo wg set wg0 peer 6PsUS...wbxBY allowed-ips 0.0.0.0/0
+\end{verbatim}
+
+\subsection{Automate the VPS switching}
+\label{sec:org580cfa5}
+For the last couple of days, I have made a python script that should automatically switch to the working VPS server during interruptions.
+Privacy VPS services such as Njalla or 1984 Hosting are bound to be unreliable at times, therefore requires such configuration.
+
+Github link: \url{https://github.com/D3faIt/vps-wireguard-switcher}
+
+\subsubsection{settings.json}
+\label{sec:org7149173}
+Looking at the github link, we need to set our settings.json configuration inside the project folder.
+When tuning the settings, we can test it's working by running the following commands to run:
+
+\begin{verbatim}
+python3 -m venv venv
+source venv/bin/activate
+./venv/bin/pip3 install -r requirements.txt
+sudo venv/bin/python3 main.py
+\end{verbatim}
+
+\subsubsection{Systemd service}
+\label{sec:org90d3dff}
+
+Create a systemd serivce that runs this script under \textit{/etc/systemd/system/}.
+Paste this content
+\begin{verbatim}
+[Unit]
+Description=VPS manager
+After=network.target
+
+[Service]
+WorkingDirectory=/home/pi/Documents/vps-manager
+ExecStart=/home/user/Documents/vps-manager/venv/bin/python3 /home/user/Documents/vps-manager/main.py
+RestartSec=5
+Restart=always
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+\end{verbatim}
+
+Now run the systemd service, and monitor it. Assuming the systemd serivce is called \textit{vps-manager.service}, we will run this command:
+
+\begin{verbatim}
+sudo systemctl start vps-manager && sudo journalctl -fu vps-manager --all
+\end{verbatim}
+
+If everything are working as expected, we can enable it:
+\begin{verbatim}
+sudo systemctl enable vps-manager
+\end{verbatim}
+\end{document}

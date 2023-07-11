@@ -1,0 +1,124 @@
+#+title: Setting up Wireguard for dual VPS system
+#+AUTHOR: Aadniz
+#+SETUPFILE: ~/Documents/latex/setup.org
+#+EXPORT_DISPATCH: org-latex-export-to-pdf
+
+\newpage
+
+* Client Tutorial
+We are assuming that the client is running a Debian 12 instance. We will ensure this setup is possible to achieve over SSH throughout the steps.
+
+** Install wireguard
+#+begin_src bash
+sudo apt update
+sudo apt upgrade
+sudo apt install wireguard
+#+end_src
+
+** Setting up the keys
+Generate the public and private keys by running the following commands
+#+begin_src bash
+wg genkey | sudo tee /etc/wireguard/private.key
+sudo chmod go= /etc/wireguard/private.key
+sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
+#+end_src
+
+** Configuring wg0.conf
+
+The configuration file is located at \textit{/etc/wireguard/wg0.conf}
+#+begin_src
+[Interface]
+Address = 10.0.0.205/16
+ListenPort = 51820
+PrivateKey = hZ46R....tsNy=
+
+[Peer]
+PublicKey = 9vxKz...IWns=
+AllowedIPs = 0.0.0.0/0
+Endpoint = 18.52.125.212:51820
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey = 6PsUS...wbxBY=
+Endpoint = 93.122.227.117:51820
+PersistentKeepalive = 25
+#+end_src
+
+In the configuration we want to set the ip address within the subnet of the wireguard network, with the same ending numbers. So having 192.168.1.205, set the wireguard ip of 10.0.0.205.
+
+You can't set the private key to link to the private.key file. We have to copy paste the value of the file into the configuration.
+
+The peer that has \textit{AllowedIPs} is the peer that gets the gateway priority.
+
+** Adding peer to the server(s)
+Copy the content of \textit{/etc/wireguard/public.key} from the client, and paste in the following command on the server
+
+#+begin_src bash
+sudo wg set wg0 peer PeUm3...29hg= allowed-ips 10.0.0.204 persistent-keepalive 25
+#+end_src
+
+** Starting the service
+#+begin_src bash
+sudo systemctl start wg-quick@wg0.service
+sudo journalctl -fu wg-quick@wg0.service
+#+end_src
+
+** Switching from one to another VPS
+When switching from one wireguard VPS to another, it is important to never overlap the Allowed-IPs.
+
+Given the active VPS1 public key being \textit{9vxKz...IWns=} and the other VPS2 public key being \textit{6PsUS...wbxBY}, the order of switching should look like this:
+
+#+begin_src bash
+# Cut off gateway to VPS1
+sudo wg set wg0 peer 9vxKz...IWns= allowed-ips 10.0.0.0/24
+# Start gateway to VPS2
+sudo wg set wg0 peer 6PsUS...wbxBY allowed-ips 0.0.0.0/0
+#+end_src
+
+** Automate the VPS switching
+For the last couple of days, I have made a python script that should automatically switch to the working VPS server during interruptions.
+Privacy VPS services such as Njalla or 1984 Hosting are bound to be unreliable at times, therefore requires such configuration.
+
+Github link: [[https://github.com/D3faIt/vps-wireguard-switcher]]
+
+*** settings.json
+Looking at the github link, we need to set our settings.json configuration inside the project folder.
+When tuning the settings, we can test it's working by running the following commands to run:
+
+#+begin_src bash
+python3 -m venv venv
+source venv/bin/activate
+./venv/bin/pip3 install -r requirements.txt
+sudo venv/bin/python3 main.py
+#+end_src
+
+*** Systemd service
+
+Create a systemd serivce that runs this script under \textit{/etc/systemd/system/}.
+Paste this content
+#+begin_src
+[Unit]
+Description=VPS manager
+After=network.target
+
+[Service]
+WorkingDirectory=/home/pi/Documents/vps-manager
+ExecStart=/home/user/Documents/vps-manager/venv/bin/python3 /home/user/Documents/vps-manager/main.py
+RestartSec=5
+Restart=always
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+#+end_src
+
+Now run the systemd service, and monitor it. Assuming the systemd serivce is called \textit{vps-manager.service}, we will run this command:
+
+#+begin_src bash
+sudo systemctl start vps-manager && sudo journalctl -fu vps-manager --all
+#+end_src
+
+If everything are working as expected, we can enable it:
+#+begin_src bash
+sudo systemctl enable vps-manager
+#+end_src
