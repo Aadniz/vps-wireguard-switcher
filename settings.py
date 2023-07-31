@@ -1,5 +1,6 @@
 import json
 import os
+import hashlib
 
 
 class Settings:
@@ -82,23 +83,48 @@ class Settings:
     lowest_priority: int = None
 
     __has_init: bool = False
+    __checksum: str = None
+    __file_path: str = None
+    __dir_path: str = None
 
     @staticmethod
     def init():
         if Settings.__has_init:
             return
+        Settings.__load()
+
+    @staticmethod
+    def reload():
+        Settings.__load()
+
+    @staticmethod
+    def updated():
+        """
+        Check if settings has been updated since last checked.
+        :return:
+        """
+        return Settings.__hash_file(Settings.__file_path) != Settings.__checksum
+
+    @staticmethod
+    def __load():
+        """
+        Here we load all the settings
+        """
         Settings.__has_init = True
+
         # See if settings file exists
-        file_dir = os.path.dirname(os.path.realpath(__file__))
-        file_path = file_dir + "/settings.json"
-        if not os.path.isfile(file_path):
-            print(f"Settings file not found: {file_path}")
+        Settings.__dir_path = os.path.dirname(os.path.realpath(__file__))
+        Settings.__file_path = Settings.__dir_path + "/settings.json"
+        if not os.path.isfile(Settings.__file_path):
+            print(f"Settings file not found: {Settings.__file_path}")
             print("Please copy paste the example shown in README.MD")
             exit(1)
 
-        f = open(file_path, "rb")
+        f = open(Settings.__file_path, "rb")
         jsonObject = json.load(f)
         f.close()
+
+        Settings.__checksum = Settings.__hash_file(Settings.__file_path)
 
         if "vps_servers" not in jsonObject:
             print("Missing setting \"vpn_servers\" in settings.json")
@@ -233,3 +259,25 @@ class Settings:
             elif Settings.cloudflare_key is not None:
                 print("WARNING: no cloudflare hosts specified! The DNS switching will apply to all domains within the account!")
                 Settings.cloudflare_hosts = []
+
+    @staticmethod
+    def __hash_file(filename):
+        """
+        This function returns the SHA-1 hash of the file passed into it
+        https://www.programiz.com/python-programming/examples/hash-file
+        """
+
+        # make a hash object
+        h = hashlib.sha1()
+
+        # open file for reading in binary mode
+        with open(filename, 'rb') as file:
+            # loop till the end of the file
+            chunk = 0
+            while chunk != b'':
+                # read only 1024 bytes at a time
+                chunk = file.read(1024)
+                h.update(chunk)
+
+        # return the hex representation of digest
+        return h.hexdigest()

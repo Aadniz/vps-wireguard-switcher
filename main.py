@@ -31,6 +31,11 @@ if __name__ == '__main__':
     """
 
     while True:
+        if Settings.updated():
+            print("Settings changed, reloading...")
+            Settings.reload()
+            Server.reload()
+
         # Reset date if not equal
         if date_today != get_date_today():
             Server.reset_max_switches()

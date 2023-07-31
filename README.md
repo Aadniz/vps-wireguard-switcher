@@ -84,6 +84,9 @@ Template/Example:
   ]
 }
 ```
+
+The `settings.json` can be changed in runtime.
+
 | Attribute                | Type               | Default value | Required | Comment                                                                                                                                                                                             |
 |--------------------------|--------------------|---------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | cloudflare_key           | string             | (None)        | No       | The cloudflare Bearer token key. If not set or incorrect, cloudflare API will remain untouched                                                                                                      |

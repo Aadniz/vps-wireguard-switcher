@@ -18,6 +18,14 @@ class Server:
     def init():
         # Init settings if it hasn't been run yet
         Settings.init()
+        Server.__load()
+
+    @staticmethod
+    def reload():
+        Server.__load()
+
+    @staticmethod
+    def __load():
         Server.hosts = Settings.servers
 
     @staticmethod
