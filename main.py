@@ -113,8 +113,12 @@ if __name__ == '__main__':
                 print(f"Switching in {round((Settings.healthy_switching_checks - healthy_double_checks_counter) * Settings.check_interval / 60, 1)} minutes ({Settings.healthy_switching_checks - healthy_double_checks_counter} loops)")
                 healthy_double_checks_counter += 1
         else:  # Kickstart wireguard again
+            if Settings.double_checks > double_checks_counter:
+                double_checks_counter += 1
+                print(f"[{double_checks_counter}/{Settings.double_checks}] Active server failed, Resetting wireguard settings in {(Settings.double_checks - double_checks_counter)} loops")
+                continue
             print("Resetting wireguard settings ...")
-            Wireguard.reset_or_switch(highest_score_host)
+            Server.switch(highest_score_host)
             if Wireguard.up:
                 continue
             if Wireguard.active_server is None:

@@ -4,7 +4,7 @@ from settings import Settings
 
 
 class Cloudflare(CloudFlare.CloudFlare):
-    #signed_in = False
+    # signed_in = False
     hosts = []
     """
     cloudflare_hosts from ./settings.py
@@ -17,7 +17,7 @@ class Cloudflare(CloudFlare.CloudFlare):
         super().__init__(token=Settings.cloudflare_key)
         self.hosts = Settings.cloudflare_hosts
 
-    def switch_dns(self, content, dns_type=None, hosts=None):
+    def switch_dns(self, content, dns_type=None, hosts=None) -> bool:
         """
         Switch cloudflare DNS
         :param content: The value to be changed
@@ -40,8 +40,7 @@ class Cloudflare(CloudFlare.CloudFlare):
                     res = self.update_dns_setting(record["zone_id"], record["id"], record["name"], tmp_dns_type, content, True)
                     if updated_anything == False and res == True:
                         updated_anything = True
-        if updated_anything == False:
-            print("Cloudflare DNS values not changed")
+        return updated_anything
 
     def update_dns_setting(self, zone_id, dns_id: str, name: str, dns_type: str, content: str, proxied: bool, comment: str = None, tags: list = None, ttl: int = None) -> bool:
         """
@@ -112,7 +111,7 @@ class Cloudflare(CloudFlare.CloudFlare):
                 continue
         return dnss
 
-    def query_zones(self, query: str | list = None):
+    def query_zones(self, query: str | list = None) -> list | None:
         """
         Function to query the zones that fits the query.
         :param query: Query 1 or more values of zone_id or name. If the query is an empty array, it will give everything in response
