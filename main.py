@@ -101,6 +101,9 @@ if __name__ == '__main__':
                 highest_score_host = host
 
         if Wireguard.up and Wireguard.active_server is not None and Server.WAN:  # Check if active server is the highest priority one
+            print(Wireguard.active_server)
+            print("Equals" if Wireguard.active_server == highest_score_host else "Not equal")
+            print(highest_score_host)
             if Wireguard.active_server == highest_score_host:  # Should land here 99.9% of the time
                 healthy_double_checks_counter = 0
             elif healthy_double_checks_counter >= Settings.healthy_switching_checks:

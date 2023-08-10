@@ -14,12 +14,10 @@ class Server:
 
     __switches_today = 0
 
-    __cf = None
 
     @staticmethod
     def init():
         # Init settings if it hasn't been run yet
-        Server.__cf = Cloudflare()
         Settings.init()
         Server.__load()
 
@@ -135,7 +133,8 @@ class Server:
             return
 
         wireguard.Wireguard.reset_or_switch(server)
-        res = Server.__cf.switch_dns(server["ip"], dns_type="A")
+        cf = Cloudflare()
+        res = cf.switch_dns(server["ip"], dns_type="A")
         if res == False:
             print("Cloudflare DNS values not changed")
         Server.__switches_today += 1

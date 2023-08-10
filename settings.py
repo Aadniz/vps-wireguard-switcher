@@ -73,9 +73,20 @@ class Settings:
     The cloudflare Bearer token key. If not set or incorrect, cloudflare API will remain untouched
     """
 
-    cloudflare_hosts: list | str = []
+    cloudflare_hosts: dict | list | str = []
     """
     The hosts, or zone ids that determines which domains to control.
+    It can also contain a dict or a list of dicts explaining dns_type and proxied.
+    For example
+    ```
+    [
+      {
+        "name": "domain.com",
+        "dns_type": "A",
+        "proxied": false
+      }
+    ]
+    ```
     IF cloudflare_key IS SET AND cloudflare_hosts IS EMPTY, IT WILL CONTROL ALL ZONES
     """
 

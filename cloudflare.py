@@ -2,7 +2,6 @@ import json
 import CloudFlare
 from settings import Settings
 
-
 class Cloudflare(CloudFlare.CloudFlare):
     # signed_in = False
     hosts = []
@@ -27,6 +26,8 @@ class Cloudflare(CloudFlare.CloudFlare):
         """
         if hosts is None:
             hosts = self.hosts
+        if type(hosts) == dict and "name" in hosts:  # Transform {...} to [{...}]
+            hosts = [hosts]
 
         # Get the DNS config for the queried hosts
         dns_settings = self.get_dns_settings(hosts, dns_type)
@@ -36,13 +37,22 @@ class Cloudflare(CloudFlare.CloudFlare):
         for setting in dns_settings:
             for record in setting:
                 tmp_dns_type = dns_type if dns_type is not None else record["type"]
+                proxied = True
+                if type(hosts) == list and len(hosts) != 0 and type(hosts[0]) == dict and "name" in hosts[0]:
+                    for host in hosts:
+                        if host["name"].strip().lower() == record["name"]:
+                            if "dns_type" in host:
+                                tmp_dns_type = host["dns_type"]
+                            if "proxied" in host:
+                                proxied = host["proxied"]
+                        break
                 if record["content"] != content:
-                    res = self.update_dns_setting(record["zone_id"], record["id"], record["name"], tmp_dns_type, content, True)
+                    res = self.update_dns_setting(record["zone_id"], record["id"], record["name"], tmp_dns_type, content, proxied)
                     if updated_anything == False and res == True:
                         updated_anything = True
         return updated_anything
 
-    def update_dns_setting(self, zone_id, dns_id: str, name: str, dns_type: str, content: str, proxied: bool, comment: str = None, tags: list = None, ttl: int = None) -> bool:
+    def update_dns_setting(self, zone_id, dns_id: str, name: str, dns_type: str, content: str, proxied: bool, comment: str = None, tags: list[str] = None, ttl: int = None) -> bool:
         """
         Function to update the DNS record, do the API query towards Cloudflare
         https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-update-dns-record
@@ -85,7 +95,7 @@ class Cloudflare(CloudFlare.CloudFlare):
 
         return True
 
-    def get_dns_settings(self, query: str | list = None, dns_type=None) -> list:
+    def get_dns_settings(self, query: dict | list[dict] | str | list[str] = None, dns_type=None) -> list:
         """
         Get the DNS settings from cloudflare specifying the Query and DNS Type
         :param query: Query 1 or more values of zone_id or name. If the query is an empty array, it will give everything in response
@@ -94,6 +104,8 @@ class Cloudflare(CloudFlare.CloudFlare):
         """
         if query is None:
             query = []
+        elif type(query) == dict and "name" in query:  # Transform {...} to [{...}]
+            query = [query]
 
         zones = self.query_zones(query)
 
@@ -101,17 +113,28 @@ class Cloudflare(CloudFlare.CloudFlare):
         dnss = []
         for zone in zones:
             try:
-                if dns_type == None:
-                    dns_records = self.zones.dns_records.get(zone["id"])
-                else:
+                if type(query) == list and len(query) != 0 and type(query[0]) == dict and "name" in query[0] and "dns_type" in query[0]:  # If cloudflare_hosts: [{"name": "blarg", "dns_type": "blarg"}, {...}, ...]
+                    found = False
+                    for host in query:
+                        if host["name"].lower().strip() == zone["name"]:
+                            dns_records = self.zones.dns_records.get(zone["id"], params={'type': host["dns_type"]})
+                            dnss.append(dns_records)
+                            found = True
+                            break
+                    if not found:
+                        print(f"No host found for zone {zone['name']}")
+                    continue
+                elif dns_type != None:
                     dns_records = self.zones.dns_records.get(zone["id"], params={'type': dns_type})
+                else:
+                    dns_records = self.zones.dns_records.get(zone["id"])
                 dnss.append(dns_records)
             except self.exceptions.CloudFlareAPIError as e:
                 print('/zones/dns_records.get %d %s - api call failed' % (e, e))
                 continue
         return dnss
 
-    def query_zones(self, query: str | list = None) -> list | None:
+    def query_zones(self, query: dict | list[dict] | str | list[str] = None) -> list | None:
         """
         Function to query the zones that fits the query.
         :param query: Query 1 or more values of zone_id or name. If the query is an empty array, it will give everything in response
@@ -134,8 +157,18 @@ class Cloudflare(CloudFlare.CloudFlare):
 
         if not query:
             return zones
+
+        if type(query) == dict and "name" in query:  # If cloudflare_hosts: {"name": "blarg", "dns_type": "blarg"}
+            query = [query["name"]]
+        elif type(query) == list and len(query) != 0 and type(query[0]) == dict and "name" in query[0]:  # If cloudflare_hosts: [{"name": "blarg", "dns_type": "blarg"}, {...}, ...]
+            query = [item["name"] for item in query]
+        elif type(query) == list and len(query) != 0 and type(query[0]) == str:
+            pass
         elif type(query) == str:
             query = [query]
+        else:
+            print(f"invalid query for query_zones", query)
+            exit(1)
 
         queried_zones = []
         for zone in zones:
