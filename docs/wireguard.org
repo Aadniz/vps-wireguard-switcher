@@ -1,14 +1,16 @@
-#+title: Setting up Wireguard for dual VPS system
+#+title: Setting up Wireguard for multi VPS system
 #+AUTHOR: Aadniz
 #+SETUPFILE: ~/Documents/latex/setup.org
 #+EXPORT_DISPATCH: org-latex-export-to-pdf
 
 \newpage
 
-* Client Tutorial
-We are assuming that the client is running a Debian 12 instance. We will ensure this setup is possible to achieve over SSH throughout the steps.
+* Server Tutorial
+Here we will explain how to setup wireguard on the VPS servers
 
 ** Install wireguard
+The first thing we need to do is to install wireguard
+
 #+begin_src bash
 sudo apt update
 sudo apt upgrade
@@ -23,10 +25,110 @@ sudo chmod go= /etc/wireguard/private.key
 sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
 #+end_src
 
+
+** Configuring wg0.conf
+When writing the configuration file, we need to figure out what ip address we want the server to have.
+We will follow the pattern of 10.0.x.1/16, where x is the VPS server count.
+We also need to write down the ethernet interface, being \textit{eth0}, \textit{ens3}, etc...
+Use this in the PostUp and PreDown.
+
+For all clients connecting to the VPS servers, we will give them the ip 10.0.0.x/32, where we want the ending number to match the local ip number on the home network.
+So having 192.168.1.205, set the wireguard ip to 10.0.0.205.
+
+The configuration file is located at \textit{/etc/wireguard/wg0.conf}
+#+begin_src conf
+[Interface]
+Address = 10.0.2.1/16
+SaveConfig = true
+PostUp = ufw route allow in on wg0 out on eth0
+PostUp = iptables -t nat -I POSTROUTING -o eth0 -j MASQUERADE
+PreDown = ufw route delete allow in on wg0 out on eth0
+PreDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+ListenPort = 51820
+PrivateKey = zJ04N....ZwiV=
+
+# Client 1
+[Peer]
+PublicKey = lnDdwz....25XD=
+AllowedIPs = 10.0.0.105/32
+PersistentKeepalive = 25
+
+# Client 2
+[Peer]
+PublicKey = KUvyJS....ovWW=
+AllowedIPs = 10.0.0.205/32
+PersistentKeepalive = 25
+#+end_src
+
+You can't set the private key to link to the private.key file. We have to copy paste the value of the file into the configuration.
+
+** Configuring the WireGuard Server's firewall
+Open the firewall for SSH and port 51820
+(Allow more ports if needed, like 80 and 443)
+#+begin_src bash
+sudo ufw allow 51820/udp
+sudo ufw allow OpenSSH
+#+end_src
+
+Then restart the firewall
+#+begin_src bash
+sudo ufw disable
+sudo ufw enable
+sudo ufw status
+#+end_src
+
+** Allow the server to forward the traffic
+To allow the server to forward the traffic, we need to add the following in the \textit{/etc/sysctl.conf}:
+
+#+begin_src conf
+net.ipv4.ip_forward=1
+net.ipv6.conf.all.forwarding=1
+#+end_src
+
+And then run this command for it to take effect:
+#+begin_src bash
+sudo sysctl -p
+#+end_src
+
+** Start WireGuard
+Now start wireguard using the following command:
+
+#+begin_src bash
+systemctl start wg-quick@wg0.service
+#+end_src
+
+** Finishing up
+Confirm that everything is working correctly.
+When everything looks OK, finally run this command:
+
+#+begin_src bash
+systemctl enable wg-quick@wg0.service
+#+end_src
+
+\newpage
+
+* Client Tutorial
+We are assuming that the client is running a Debian 12 instance. We will ensure this setup is possible to achieve over SSH throughout the steps.
+
+** Install wireguard
+#+begin_src bash
+sudo apt update
+sudo apt upgrade
+sudo apt install wireguard
+#+end_src
+
+** Setting up the keys
+Again, as we did on the server, we need to run the following commands:
+#+begin_src bash
+wg genkey | sudo tee /etc/wireguard/private.key
+sudo chmod go= /etc/wireguard/private.key
+sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
+#+end_src
+
 ** Configuring wg0.conf
 
 The configuration file is located at \textit{/etc/wireguard/wg0.conf}
-#+begin_src
+#+begin_src conf
 [Interface]
 Address = 10.0.0.205/16
 ListenPort = 51820
@@ -40,7 +142,14 @@ PersistentKeepalive = 25
 
 [Peer]
 PublicKey = 6PsUS...wbxBY=
+AllowedIPs = 10.0.1.0/24
 Endpoint = 93.122.227.117:51820
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey = 4vVA4...4uOas=
+AllowedIPs = 10.0.2.0/24
+Endpoint = 103.12.207.17:51820
 PersistentKeepalive = 25
 #+end_src
 
@@ -102,7 +211,7 @@ Description=VPS manager
 After=network.target
 
 [Service]
-WorkingDirectory=/home/pi/Documents/vps-manager
+WorkingDirectory=/home/user/Documents/vps-manager
 ExecStart=/home/user/Documents/vps-manager/venv/bin/python3 /home/user/Documents/vps-manager/main.py
 RestartSec=5
 Restart=always

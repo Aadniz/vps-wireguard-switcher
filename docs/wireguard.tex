@@ -1,4 +1,4 @@
-% Created 2023-07-11 Tue 08:35
+% Created 2023-08-16 Wed 21:19
 % Intended LaTeX compiler: pdflatex
 \documentclass[letterpaper, 11pt]{article}
                       \usepackage{lmodern} % Ensures we have the right font
@@ -37,13 +37,13 @@
 \setlist{itemsep=-2pt} % or \setlist{noitemsep} to leave space around whole list
 \author{Aadniz}
 \date{\today}
-\title{Setting up Wireguard for dual VPS system}
+\title{Setting up Wireguard for multi VPS system}
 \hypersetup{
  pdfauthor={Aadniz},
- pdftitle={Setting up Wireguard for dual VPS system},
+ pdftitle={Setting up Wireguard for multi VPS system},
  pdfkeywords={},
  pdfsubject={},
- pdfcreator={Emacs 28.2 (Org mode 9.6)}, 
+ pdfcreator={Emacs 29.1 (Org mode 9.6)}, 
  pdflang={English}}
 \begin{document}
 
@@ -52,12 +52,14 @@
 
 \newpage
 
-\section{Client Tutorial}
-\label{sec:org9161e73}
-We are assuming that the client is running a Debian 12 instance. We will ensure this setup is possible to achieve over SSH throughout the steps.
+\section{Server Tutorial}
+\label{sec:orgf9d647a}
+Here we will explain how to setup wireguard on the VPS servers
 
 \subsection{Install wireguard}
-\label{sec:orgd6194fe}
+\label{sec:org51529d2}
+The first thing we need to do is to install wireguard
+
 \begin{verbatim}
 sudo apt update
 sudo apt upgrade
@@ -65,7 +67,7 @@ sudo apt install wireguard
 \end{verbatim}
 
 \subsection{Setting up the keys}
-\label{sec:org182215f}
+\label{sec:org00284c5}
 Generate the public and private keys by running the following commands
 \begin{verbatim}
 wg genkey | sudo tee /etc/wireguard/private.key
@@ -73,8 +75,116 @@ sudo chmod go= /etc/wireguard/private.key
 sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
 \end{verbatim}
 
+
 \subsection{Configuring wg0.conf}
-\label{sec:orgf931ed9}
+\label{sec:org34e985f}
+When writing the configuration file, we need to figure out what ip address we want the server to have.
+We will follow the pattern of 10.0.x.1/16, where x is the VPS server count.
+We also need to write down the ethernet interface, being \textit{eth0}, \textit{ens3}, etc\ldots{}
+Use this in the PostUp and PreDown.
+
+For all clients connecting to the VPS servers, we will give them the ip 10.0.0.x/32, where we want the ending number to match the local ip number on the home network.
+So having 192.168.1.205, set the wireguard ip to 10.0.0.205.
+
+The configuration file is located at \textit{/etc/wireguard/wg0.conf}
+\begin{verbatim}
+[Interface]
+Address = 10.0.2.1/16
+SaveConfig = true
+PostUp = ufw route allow in on wg0 out on eth0
+PostUp = iptables -t nat -I POSTROUTING -o eth0 -j MASQUERADE
+PreDown = ufw route delete allow in on wg0 out on eth0
+PreDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+ListenPort = 51820
+PrivateKey = zJ04N....ZwiV=
+
+# Client 1
+[Peer]
+PublicKey = lnDdwz....25XD=
+AllowedIPs = 10.0.0.105/32
+PersistentKeepalive = 25
+
+# Client 2
+[Peer]
+PublicKey = KUvyJS....ovWW=
+AllowedIPs = 10.0.0.205/32
+PersistentKeepalive = 25
+\end{verbatim}
+
+You can't set the private key to link to the private.key file. We have to copy paste the value of the file into the configuration.
+
+\subsection{Configuring the WireGuard Server's firewall}
+\label{sec:orgce0c158}
+Open the firewall for SSH and port 51820
+(Allow more ports if needed, like 80 and 443)
+\begin{verbatim}
+sudo ufw allow 51820/udp
+sudo ufw allow OpenSSH
+\end{verbatim}
+
+Then restart the firewall
+\begin{verbatim}
+sudo ufw disable
+sudo ufw enable
+sudo ufw status
+\end{verbatim}
+
+\subsection{Allow the server to forward the traffic}
+\label{sec:org6980888}
+To allow the server to forward the traffic, we need to add the following in the \textit{/etc/sysctl.conf}:
+
+\begin{verbatim}
+net.ipv4.ip_forward=1
+net.ipv6.conf.all.forwarding=1
+\end{verbatim}
+
+And then run this command for it to take effect:
+\begin{verbatim}
+sudo sysctl -p
+\end{verbatim}
+
+\subsection{Start WireGuard}
+\label{sec:org94c3943}
+Now start wireguard using the following command:
+
+\begin{verbatim}
+systemctl start wg-quick@wg0.service
+\end{verbatim}
+
+\subsection{Finishing up}
+\label{sec:org48db4e5}
+Confirm that everything is working correctly.
+When everything looks OK, finally run this command:
+
+\begin{verbatim}
+systemctl enable wg-quick@wg0.service
+\end{verbatim}
+
+\newpage
+
+\section{Client Tutorial}
+\label{sec:org1a1510a}
+We are assuming that the client is running a Debian 12 instance. We will ensure this setup is possible to achieve over SSH throughout the steps.
+
+\subsection{Install wireguard}
+\label{sec:orge8f53b6}
+\begin{verbatim}
+sudo apt update
+sudo apt upgrade
+sudo apt install wireguard
+\end{verbatim}
+
+\subsection{Setting up the keys}
+\label{sec:org841d747}
+Again, as we did on the server, we need to run the following commands:
+\begin{verbatim}
+wg genkey | sudo tee /etc/wireguard/private.key
+sudo chmod go= /etc/wireguard/private.key
+sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
+\end{verbatim}
+
+\subsection{Configuring wg0.conf}
+\label{sec:org483633c}
 
 The configuration file is located at \textit{/etc/wireguard/wg0.conf}
 \begin{verbatim}
@@ -91,7 +201,14 @@ PersistentKeepalive = 25
 
 [Peer]
 PublicKey = 6PsUS...wbxBY=
+AllowedIPs = 10.0.1.0/24
 Endpoint = 93.122.227.117:51820
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey = 4vVA4...4uOas=
+AllowedIPs = 10.0.2.0/24
+Endpoint = 103.12.207.17:51820
 PersistentKeepalive = 25
 \end{verbatim}
 
@@ -102,7 +219,7 @@ You can't set the private key to link to the private.key file. We have to copy p
 The peer that has \textit{AllowedIPs} is the peer that gets the gateway priority.
 
 \subsection{Adding peer to the server(s)}
-\label{sec:org9cfee12}
+\label{sec:org859c234}
 Copy the content of \textit{/etc/wireguard/public.key} from the client, and paste in the following command on the server
 
 \begin{verbatim}
@@ -110,14 +227,14 @@ sudo wg set wg0 peer PeUm3...29hg= allowed-ips 10.0.0.204 persistent-keepalive 2
 \end{verbatim}
 
 \subsection{Starting the service}
-\label{sec:org13ac0f6}
+\label{sec:org057f1ac}
 \begin{verbatim}
 sudo systemctl start wg-quick@wg0.service
 sudo journalctl -fu wg-quick@wg0.service
 \end{verbatim}
 
 \subsection{Switching from one to another VPS}
-\label{sec:org57c70c9}
+\label{sec:org85025e2}
 When switching from one wireguard VPS to another, it is important to never overlap the Allowed-IPs.
 
 Given the active VPS1 public key being \textit{9vxKz...IWns=} and the other VPS2 public key being \textit{6PsUS...wbxBY}, the order of switching should look like this:
@@ -130,14 +247,14 @@ sudo wg set wg0 peer 6PsUS...wbxBY allowed-ips 0.0.0.0/0
 \end{verbatim}
 
 \subsection{Automate the VPS switching}
-\label{sec:org580cfa5}
+\label{sec:org56e17ce}
 For the last couple of days, I have made a python script that should automatically switch to the working VPS server during interruptions.
 Privacy VPS services such as Njalla or 1984 Hosting are bound to be unreliable at times, therefore requires such configuration.
 
 Github link: \url{https://github.com/D3faIt/vps-wireguard-switcher}
 
 \subsubsection{settings.json}
-\label{sec:org7149173}
+\label{sec:orgb27e8f2}
 Looking at the github link, we need to set our settings.json configuration inside the project folder.
 When tuning the settings, we can test it's working by running the following commands to run:
 
@@ -149,7 +266,7 @@ sudo venv/bin/python3 main.py
 \end{verbatim}
 
 \subsubsection{Systemd service}
-\label{sec:org90d3dff}
+\label{sec:org1f88bd2}
 
 Create a systemd serivce that runs this script under \textit{/etc/systemd/system/}.
 Paste this content
@@ -159,7 +276,7 @@ Description=VPS manager
 After=network.target
 
 [Service]
-WorkingDirectory=/home/pi/Documents/vps-manager
+WorkingDirectory=/home/user/Documents/vps-manager
 ExecStart=/home/user/Documents/vps-manager/venv/bin/python3 /home/user/Documents/vps-manager/main.py
 RestartSec=5
 Restart=always
