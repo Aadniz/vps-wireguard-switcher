@@ -2,6 +2,7 @@ import urllib.request
 from ping3 import ping, verbose_ping
 from urllib.parse import urlparse
 import requests
+import time
 
 from settings import Settings
 from cloudflare import Cloudflare
@@ -126,13 +127,19 @@ class Server:
         return l_e_successes
 
     @staticmethod
-    def switch(query):
+    def switch(query=None, force=False):
+        """
+        Switch wireguard route, will also touch on cloudflare route.
+        :param query: The server name, or None for the highest priority one ignoring checks
+        :param force: Force reset wireguard settings
+        :return:
+        """
         server = Server.get_server(query)
         if Server.__switches_today >= Settings.max_switches_a_day:
             print(f"Reached maximum switches today of {Server.__switches_today}/{Settings.max_switches_a_day}")
             return
 
-        wireguard.Wireguard.reset_or_switch(server)
+        wireguard.Wireguard.reset_or_switch(server, force)
         cf = Cloudflare()
         res = cf.switch_dns(server["ip"], dns_type="A")
         if res == False:
@@ -140,7 +147,7 @@ class Server:
         Server.__switches_today += 1
 
     @staticmethod
-    def self_test() -> bool:
+    def check_WAN() -> bool:
         """
         This function will check if there is any network connection at all
         :return: returns true if it has network connection
@@ -148,17 +155,26 @@ class Server:
         tests = len(Settings.self_test_addresses)
         successes = 0
         for host in Settings.self_test_addresses:
+            print(f" {host}", end="\t")
             # First try to ping
             res = None
+            timer = 0
             try:
+                start = time.time()
                 res = ping(host, 4, "ms")
+                end = time.time()
+                timer = end - start
             except PermissionError as e:
                 print("No permission to ping. Please run as root or check https://github.com/robfox92/ping3/blob/c18fb2a23fe601356cba69e6881d92605c875b79/TROUBLESHOOTING.MD")
             except OSError as e:
                 print(f"Pinging address {host} is not possible with the active network interfaces.")
             if res is not None and res != 0:
                 successes += 1
+                print(str(int(timer*1000)) + "ms")
+            else:
+                print(f"FAILED ({int(timer*1000)}ms)")
 
+        print(f"{successes/tests*100}% WAN")
         Server.WAN = successes/tests > Settings.self_test_success_rate
         return Server.WAN
 
@@ -166,10 +182,16 @@ class Server:
     def get_server(query) -> dict:
         """
         Function to resolve query and return a server object
-        :param query: In case query is a number, it will check the priority. Otherwise it will match on the strings
+        :param query: In case query is a number, it will check the priority. Otherwise it will match on the strings. If none, return the server with highest priority
         :return: returns the server object
         """
+        highest_priority = 100000000
+        chosen_host = None
         for host in Server.hosts:
+            if query is None and highest_priority > host["priority"]:
+                highest_priority = host["priority"]
+                chosen_host = host
+                continue
             if host == query:
                 return host
             for key, value in host.items():
@@ -179,6 +201,8 @@ class Server:
                 if query == value:
                     return host
 
+        if chosen_host is not None:
+            return chosen_host
         print("Query failed!")
         exit(1)
 

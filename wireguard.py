@@ -154,12 +154,14 @@ class Wireguard:
             result = output.stdout.strip()
 
             if output.returncode != 0:
-                print("ERROR: ", output.stderr)
+                print(f"({host['name']})", "ERROR: ", output.stderr)
                 time.sleep(2)
                 c += 1
                 continue
-            if result != "":
-                print(result)
+            elif result != "":
+                print(f"({host['name']})", result)
+            else:
+                print(f"({host['name']})", "wg", "set", Wireguard.interface, "peer", host["public_key"], "endpoint", host["ip"] + ":" + str(host["port"]), "allowed-ips", allowed_ips, "persistent-keepalive", str(host["persistent_keepalive"]))
 
             time.sleep(8)
             c += 1

@@ -35,6 +35,7 @@ if __name__ == '__main__':
             print("Settings changed, reloading...")
             Settings.reload()
             Server.reload()
+            Wireguard.self_test()
 
         # Reset date if not equal
         if date_today != get_date_today():
@@ -42,8 +43,8 @@ if __name__ == '__main__':
             date_today = get_date_today()
 
         # Self-test first
-        print("Running self-test ...")
-        res = Server.self_test()
+        print("Checking WAN ...")
+        res = Server.check_WAN()
         if not res:
             print("The Server has no WAN internet!!")
 
@@ -81,14 +82,14 @@ if __name__ == '__main__':
                     break
 
             time.sleep(10)
-            print("Running self-test, checking that the server has WAN now ...", end="")
-            res = Server.self_test()
+            print("Checking that the server has WAN now ...", end="")
+            res = Server.check_WAN()
             if res:
+                double_checks_counter = 0
                 print(" OK")
             else:
                 print("\nCRITICAL! The Server STILL has no WAN internet!!")
                 Wireguard.up = False
-            double_checks_counter = 0
 
         # Pick the host with the highest score
         highest_score_host = None
@@ -101,9 +102,6 @@ if __name__ == '__main__':
                 highest_score_host = host
 
         if Wireguard.up and Wireguard.active_server is not None and Server.WAN:  # Check if active server is the highest priority one
-            print(Wireguard.active_server)
-            print("Equals" if Wireguard.active_server == highest_score_host else "Not equal")
-            print(highest_score_host)
             if Wireguard.active_server == highest_score_host:  # Should land here 99.9% of the time
                 healthy_double_checks_counter = 0
             elif healthy_double_checks_counter >= Settings.healthy_switching_checks:
@@ -115,13 +113,14 @@ if __name__ == '__main__':
                 print(f"Want to switch to higher priority route {highest_score_host['name']}")
                 print(f"Switching in {round((Settings.healthy_switching_checks - healthy_double_checks_counter) * Settings.check_interval / 60, 1)} minutes ({Settings.healthy_switching_checks - healthy_double_checks_counter} loops)")
                 healthy_double_checks_counter += 1
+            double_checks_counter = 0
         else:  # Kickstart wireguard again
             if Settings.double_checks > double_checks_counter:
                 double_checks_counter += 1
                 print(f"[{double_checks_counter}/{Settings.double_checks}] Active server failed, Resetting wireguard settings in {(Settings.double_checks - double_checks_counter)} loops")
                 continue
             print("Resetting wireguard settings ...")
-            Server.switch(highest_score_host)
+            Server.switch(highest_score_host, True)
             if Wireguard.up:
                 continue
             if Wireguard.active_server is None:

@@ -22,7 +22,7 @@ class Cloudflare(CloudFlare.CloudFlare):
         :param content: The value to be changed
         :param dns_type: The type to change, like "A", "AAAA", "TXT" etc...
         :param hosts: The hosts this applies to. If not set, will use the settings.json hosts. If neither are set, it will update EVERYTHING!
-        :return:
+        :return: True if any updates happened at all
         """
         if hosts is None:
             hosts = self.hosts
