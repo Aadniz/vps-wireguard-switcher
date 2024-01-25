@@ -4,7 +4,7 @@ Script to automate switching between 2 or more VPS servers using a wireguard con
 ### Setting up
 When setting up the project, we first need to clone the repository, and enter the directory
 ```bash
-git clone https://github.com/D3faIt/vps-wireguard-switcher.git
+git clone https://github.com/Aadniz/vps-wireguard-switcher.git
 cd vps-wireguard-switcher
 ```
 Now we need to create the virtual environment.

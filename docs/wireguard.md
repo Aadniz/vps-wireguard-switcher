@@ -109,7 +109,7 @@ Given the active VPS1 public key being \textit{9vxKz...IWns=} and the other VPS2
 For the last couple of days, I have made a python script that should automatically switch to the working VPS server during interruptions.
 Privacy VPS services such as Njalla or 1984 Hosting are bound to be unreliable at times, therefore requires such configuration.
 
-Github link: <https://github.com/D3faIt/vps-wireguard-switcher>
+Github link: <https://github.com/Aadniz/vps-wireguard-switcher>
 
 
 <a id="org186d7f5"></a>
